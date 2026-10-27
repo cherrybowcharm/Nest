@@ -76,7 +76,9 @@ def get_repository_file_content(url: str, *, timeout: float | None = 30) -> str:
 
     """
     try:
-        return requests.get(url, timeout=timeout).text
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+        return response.text
     except RequestException as e:
         logger.exception("Failed to fetch file", extra={"URL": url, "error": str(e)})
         return ""

@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
-from requests.exceptions import RequestException
+from requests.exceptions import HTTPError, RequestException
 
 from apps.github.utils import (
     check_funding_policy_compliance,
@@ -74,16 +74,47 @@ class TestUtils:
         url = "https://example.com/file.txt"
         content = "Hello, World!"
         response = MagicMock()
+        response.status_code = 200
         response.text = content
         mocker.patch("requests.get", return_value=response)
         result = get_repository_file_content(url)
         assert result == content
+        response.raise_for_status.assert_called_once()
 
     def test_get_repository_file_content_exception(self, mocker):
         url = "https://example.com/file.txt"
         mocker.patch("requests.get", side_effect=RequestException("Test exception"))
         result = get_repository_file_content(url)
         assert result == ""
+
+    def test_get_repository_file_content_404(self, mocker):
+        url = "https://example.com/missing.txt"
+        response = MagicMock()
+        response.status_code = 404
+        response.text = "404: Not Found"
+        response.raise_for_status.side_effect = HTTPError("404 Client Error")
+
+        mocker.patch("requests.get", return_value=response)
+
+        result = get_repository_file_content(url)
+
+        assert result == ""
+
+    def test_get_repository_file_content_500(self, mocker):
+        url = "https://example.com/file.txt"
+
+        response = MagicMock()
+        response.status_code = 500
+        response.text = "Internal Server Error"
+        response.raise_for_status.side_effect = HTTPError("500 Server Error")
+
+        mocker.patch("requests.get", return_value=response)
+
+        result = get_repository_file_content(url)
+
+        assert result == ""
+
+
 
     @pytest.mark.parametrize(
         ("url", "expected"),
