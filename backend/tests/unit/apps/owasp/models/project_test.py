@@ -525,8 +525,28 @@ class TestProjectProperties:
         project = Project()
         result = project.unanswered_issues_count
 
-        mock_issues.filter.assert_called_once_with(comments_count=0)
+        mock_issues.filter.assert_called_once_with(
+            state="open",
+            comments_count=0,
+        )
         assert result == 10
+
+    def test_unassigned_issues_count(self, mocker):
+        """Test unassigned_issues_count returns count of unassigned issues."""
+        mock_issues = Mock()
+        mock_issues.filter.return_value.count.return_value = 8
+        mocker.patch.object(
+            Project, "issues", new_callable=mocker.PropertyMock, return_value=mock_issues
+        )
+
+        project = Project()
+        result = project.unassigned_issues_count
+
+        mock_issues.filter.assert_called_once_with(
+            state="open",
+            assignees__isnull=True,
+        )
+        assert result == 8
 
     def test_unassigned_issues_count(self, mocker):
         """Test unassigned_issues_count returns count of unassigned issues."""
